@@ -1,160 +1,27 @@
 name: Weekly Forex News Report
 
 on:
-  workflow_dispatch:
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Say hello
-        run: echo "👋 ¡Hola bru! El workflow corre perfecto."
-name: Weekly 
-Forex News Report
-
-on:
   schedule:
     - cron: '0 17 * * 0'  # Domingo a las 17:00 UTC
-  workflow_dispatch:
+  workflow_dispatch:  # Permite correrlo manualmente también
 
 jobs:
-  run-bot:
+  send-report:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
+      - name: Clonar el repositorio
         uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Configurar Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run weekly bot
-        run: python bot.py
-name: Weekly Forex News Report
-
-on:
-  schedule:
-    - cron: '0 17 * * 0'  # Domingo a las 17:00 UTC
-  workflow_dispatch:
-
-jobs:
-  run-bot:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run weekly bot
-        run: python bot.py
-name: Weekly Forex News Report
-
-on:
-  schedule:
-    - cron: '0 17 * * 0'  # Domingo a las 17:00 UTC
-  workflow_dispatch:
-
-jobs:
-  run-bot:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run weekly bot
-        run: python bot.py
-name: Weekly Forex News Report
-
-on:
-  schedule:
-    - cron: '0 17 * * 0'  # Domingo a las 17:00 UTC
-  workflow_dispatch:
-
-jobs:
-  run-bot:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run weekly bot
-        run: python bot.py
-name: Weekly Forex News Report
-
-on:
-  schedule:
-    - cron: '0 17 * * 0'  # Domingo a las 17:00 UTC
-  workflow_dispatch:
-
-jobs:
-  run-bot:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run weekly bot
-        run: python bot.py
-name: Weekly Forex News 
-Report
-
-on:
-  schedule:
-    - cron: '0 14 * * 0'  # Domingo 17:00 Berlín (14:00 UTC)
-  workflow_dispatch:
-
-jobs:
-  run-weekly-report:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
+      - name: Instalar dependencias
         run: |
-          pip install requests beautifulsoup4 pytz
+          python -m pip install --upgrade pip
+          pip install -r forex-news-bot/requirements.txt
 
-      - name: Run weekly report
-        env:
-          BOT_TOKEN:
+      - name: Ejecutar bot.py
+        run: python forex-news-bot/bot.py
