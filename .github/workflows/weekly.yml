@@ -2,7 +2,7 @@ name: Weekly Forex News Report
 
 on:
   schedule:
-    - cron: '0 14 * * 0'  # Domingo 17:00 Berlín (14:00 UTC)
+    - cron: '0 15 * * 0'  # Domingo 17:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -19,11 +19,10 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        working-directory: forex-news-bot
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r forex-news-bot/requirements.txt
 
       - name: Run weekly report
-        working-directory: forex-news-bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: python bot.py
