@@ -1,6 +1,18 @@
 name: Weekly Forex News Report
 
 on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Say hello
+        run: echo "👋 ¡Hola bru! El workflow corre perfecto."
+name: Weekly 
+Forex News Report
+
+on:
   schedule:
     - cron: '0 17 * * 0'  # Domingo a las 17:00 UTC
   workflow_dispatch:
@@ -145,7 +157,4 @@ jobs:
 
       - name: Run weekly report
         env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-        run: |
-          python weekly_report.py
-
+          BOT_TOKEN:
