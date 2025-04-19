@@ -2,7 +2,7 @@ name: Weekly Forex News Report
 
 on:
   schedule:
-    - cron: '0 15 * * 0'          # domingo 17:00 UTC (19:00 Berlín)
+    - cron: '0 15 * * 0'  # Domingo 17:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -10,35 +10,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      #‑‑‑ Paso de depuración: ver Python y pip antes de instalar
-      - name: Show python & pip versions
+      - name: Install dependencies
+        working-directory: forex-news-bot
         run: |
-          python --version
-          pip --version
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      #‑‑‑ Instala TODO lo del requirements.txt (incluye selenium)
-      - name: Install dependencies (requirements.txt)
-        run: pip install -r forex-news-bot/requirements.txt
-
-      #‑‑‑ Paso extra de seguridad: instala selenium otra vez silenciando el output
-      - name: Ensure selenium is present
-        run: python -m pip install --quiet --upgrade selenium
-
-      #‑‑‑ Paso de depuración: lista lo que quedó instalado
-      - name: pip freeze (debug)
-        run: pip freeze | grep selenium || true
-
-      #‑‑‑ Finalmente ejecuta el bot
-      - name: Run weekly report
+      - name: Run weekly report
+        working-directory: forex-news-bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-        working-directory: forex-news-bot
         run: python bot.py
