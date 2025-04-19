@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install requests beautifulsoup4 pytz selenium
         working-directory: forex-news-bot
 
       - name: Run weekly report
