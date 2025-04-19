@@ -18,12 +18,14 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-        working-directory: forex-news-bot
+      - name: Install dependencies from requirements.txt
+        run: |
+          cd forex-news-bot
+          pip install -r requirements.txt
 
       - name: Run weekly report
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-        run: python bot.py
-        working-directory: forex-news-bot
+        run: |
+          cd forex-news-bot
+          python bot.py
