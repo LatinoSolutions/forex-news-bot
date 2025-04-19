@@ -5,11 +5,12 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 import requests
+import os
 
 # === CONFIGURACIÓN DEL BOT ===
-import os
-BOT_TOKEN = os.environ.get("BOT_TOKEN")  # Usa variable de entorno
-CHAT_ID = '-1002675757828'
+
+BOT_TOKEN = os.environ.get("BOT_TOKEN")  # Lee el token desde las variables de entorno (GitHub Secrets)
+CHAT_ID = -1002675757828  # sin comillas, como número
 THREAD_ID = 10  # ID del topic "Forex-News"
 
 # === OPCIONES PARA CHROME HEADLESS ===
