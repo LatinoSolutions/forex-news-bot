@@ -2,7 +2,7 @@ name: Weekly Forex News Report
 
 on:
   schedule:
-    - cron: '0 15 * * 0'  # Domingo 17:00 UTC = 19:00 Berlín
+    - cron: '0 15 * * 0'  # Domingo 17:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install requests beautifulsoup4 pytz
+          pip install requests beautifulsoup4 pytz selenium
 
       - name: Run weekly report
         env:
