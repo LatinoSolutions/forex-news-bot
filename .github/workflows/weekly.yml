@@ -20,9 +20,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r forex-news-bot/requirements.txt
+          pip install -r requirements.txt
+        working-directory: forex-news-bot
 
       - name: Run weekly report
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: python bot.py
+        working-directory: forex-news-bot
