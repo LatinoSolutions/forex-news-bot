@@ -22,10 +22,10 @@ jobs:
         working-directory: forex-news-bot
         run: |
           python -m pip install --upgrade pip
-          python -m pip install selenium webdriver-manager requests beautifulsoup4 pytz
+          pip install -r requirements.txt
 
       - name: Run weekly report
+        working-directory: forex-news-bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: python bot.py
-        working-directory: forex-news-bot
