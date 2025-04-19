@@ -2,32 +2,27 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 import time
 import requests
 
 # === CONFIGURACIÓN DEL BOT ===
-BOT_TOKEN = '7820146097:AAGIH6RmpUwGUUZV2ICf3dp0T96_jp32f9E'
+BOT_TOKEN = 'TU_TOKEN_AQUI'
 CHAT_ID = '-1002675757828'
 THREAD_ID = 10  # ID del topic "Forex-News"
 
-# === CONFIGURACIÓN DE BRAVE ===
-BRAVE_PATH = "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
-CHROMEDRIVER_PATH = "/Users/bru/Desktop/MediTrading/chromedriver"
-
-# === OPCIONES PARA BRAVE ===
+# === OPCIONES PARA CHROME HEADLESS ===
 options = Options()
-options.binary_location = BRAVE_PATH
-options.add_argument("--headless")  # Puedes comentar esta línea para ver Brave abrirse
+options.add_argument("--headless")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 
-# === INICIAR DRIVER ===
-service = Service(executable_path=CHROMEDRIVER_PATH)
-driver = webdriver.Chrome(service=service, options=options)
+# === INICIAR CHROME DRIVER ===
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
 # === ABRIR FOREX FACTORY ===
 driver.get("https://www.forexfactory.com/calendar")
-time.sleep(5)  # Esperar que cargue JavaScript
+time.sleep(5)
 
 # === EXTRAER NOTICIAS USD DE ALTO IMPACTO ===
 rows = driver.find_elements(By.CSS_SELECTOR, "tr.calendar__row")
