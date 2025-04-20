@@ -1,74 +1,113 @@
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from datetime import datetime, timedelta
-import os, time
+import os
+import requests
+import datetime
+import pytz
+from telegram import Bot
 
-# === BOT TOKEN ===
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+# === CONFIG ===
+BOT_TOKEN = os.getenv("BOT_TOKEN")           # Pon tu token en GitHub Secrets
+CHAT_ID    = os.getenv("CHAT_ID", "-1002675757828")
+THREAD_ID  = int(os.getenv("THREAD_ID", "10"))
 
-# === CONFIGURACIÓN DEL CHROME HEADLESS ===
-options = Options()
-options.add_argument("--headless")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
-driver_path = "/usr/bin/chromedriver"  # Asegúrate que este es el path correcto en tu servidor
+# JSON feed de ForexFactory (export semanal) :contentReference[oaicite:0]{index=0} :contentReference[oaicite:1]{index=1}
+JSON_URL   = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
 
-def extract_news():
-    service = Service(executable_path=driver_path)
-    driver = webdriver.Chrome(service=service, options=options)
+# Timezone de tu canal (Europe/Berlin)
+TZ = pytz.timezone("Europe/Berlin")
 
-    driver.get("https://www.forexfactory.com/calendar")
-    time.sleep(5)  # Esperar carga
+bot = Bot(token=BOT_TOKEN)
 
-    rows = driver.find_elements(By.CSS_SELECTOR, "tr.calendar__row")
-    news = []
+def fetch_events():
+    resp = requests.get(JSON_URL)
+    resp.raise_for_status()
+    return resp.json()  # lista de dicts
 
-    for row in rows:
-        try:
-            impact_icon = row.find_element(By.CSS_SELECTOR, "td.impact span.icon")
-            impact_color = impact_icon.get_attribute("style")
-            currency = row.find_element(By.CSS_SELECTOR, "td.currency").text.strip()
-            event = row.find_element(By.CSS_SELECTOR, "td.event").text.strip()
-            date_str = row.find_element(By.CSS_SELECTOR, "td.date").text.strip()
-            time_str = row.find_element(By.CSS_SELECTOR, "td.time").text.strip()
-            
-            if "red" in impact_color and currency == "USD":
-                news.append(f"🗓 {date_str} - 🕒 {time_str} | 📢 {event}")
-        except:
-            continue
+def filter_by_date(events, target_date, currencies, impact_levels):
+    out = []
+    for e in events:
+        # e["Date"] viene en "YYYY-MM-DD"
+        date = datetime.datetime.strptime(e["Date"], "%Y-%m-%d").date()
+        if date != target_date: continue
+        if e.get("Currency") not in currencies: continue
+        if int(e.get("ImpactLevel",0)) not in impact_levels: continue
+        out.append(e)
+    return out
 
-    driver.quit()
-    return news
+def format_messages(events):
+    msgs = []
+    for e in events:
+        t = e.get("Time")            # e.g. "08:30am"
+        ev = e.get("Event")
+        prev = e.get("Previous")
+        fc = e.get("Forecast")
+        msgs.append(f"🕒 *{t}* | _{ev}_\nForecast: {fc} | Previous: {prev}")
+    return msgs
 
-async def this_week(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    all_news = extract_news()
-    this_week_start = datetime.now().date() - timedelta(days=datetime.now().weekday())
-    filtered = [n for n in all_news if str(this_week_start.day) in n]
+def send_messages(msgs):
+    for m in msgs:
+        bot.send_message(
+            chat_id=CHAT_ID,
+            message_thread_id=THREAD_ID,
+            text=m,
+            parse_mode="Markdown"
+        )
 
-    if filtered:
-        await update.message.reply_text("\n".join(filtered))
-    else:
-        await update.message.reply_text("📊 No se encontraron noticias de esta semana.")
+def main():
+    now = datetime.datetime.now(TZ)
+    today = now.date()
+    wd = today.weekday()  # lun=0 ... dom=6
 
-async def previous_week(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    all_news = extract_news()
-    last_week_start = datetime.now().date() - timedelta(days=datetime.now().weekday() + 7)
-    filtered = [n for n in all_news if str(last_week_start.day) in n]
+    events = fetch_events()
 
-    if filtered:
-        await update.message.reply_text("\n".join(filtered))
-    else:
-        await update.message.reply_text("🕰️ No se encontraron noticias de la semana pasada.")
+    # ⚠️ 5 min antes de cada evento
+    if now.minute % 5 == 0 and now.hour*60+now.minute not in (4,15):  # excluye los horarios de resumen
+        # Target timeslot: eventos que comienzan en 5 min
+        in_5min = []
+        for e in events:
+            # combinar Date + Time -> datetime en TZ
+            dt_str = f"{e['Date']} {e['Time']}"
+            dt = datetime.datetime.strptime(dt_str, "%Y-%m-%d %I:%M%p")
+            dt = TZ.localize(dt)
+            delta = (dt - now).total_seconds()/60
+            if 4.5 < delta <= 5.5 and e["Currency"] in ["USD","EUR"] and int(e["ImpactLevel"])>=2:
+                in_5min.append(e)
+        if in_5min:
+            send_messages(format_messages(in_5min))
+        return
 
-if __name__ == '__main__':
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    # 🗓 Boletín diario a las 06:00
+    if now.hour == 6 and now.minute==0:
+        today_events = filter_by_date(events, today, ["USD","EUR"], [2,3])
+        if today_events:
+            send_messages(format_messages(today_events))
+        return
 
-    app.add_handler(CommandHandler("this_week", this_week))
-    app.add_handler(CommandHandler("previous_week", previous_week))
+    # 📋 Resumen semana pasada: sábados 17:00
+    if wd == 5 and now.hour==17 and now.minute==0:
+        start = today - datetime.timedelta(days=7)
+        msgs = []
+        for d in (start + datetime.timedelta(days=i) for i in range(7)):
+            evs = filter_by_date(events, d, ["USD","EUR"], [2,3])
+            for e in evs:
+                e["Date"] = d.strftime("%a %d")
+                msgs.append(e)
+        if msgs:
+            send_messages(format_messages(msgs))
+        return
 
-    print("🤖 Bot está corriendo...")
-    app.run_polling()
+    # 🔮 Resumen semana entrante: domingos 17:00
+    if wd == 6 and now.hour==17 and now.minute==0:
+        # misma lógica que anterior, pero para los próximos 7 días
+        msgs = []
+        for i in range(1,8):
+            d = today + datetime.timedelta(days=i)
+            evs = filter_by_date(events, d, ["USD","EUR"], [2,3])
+            for e in evs:
+                e["Date"] = d.strftime("%a %d")
+                msgs.append(e)
+        if msgs:
+            send_messages(format_messages(msgs))
+        return
+
+if __name__ == "__main__":
+    main()
