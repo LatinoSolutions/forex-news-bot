@@ -59,13 +59,16 @@ def main():
 
     events = fetch_events()
 
-    # ⚠️ 5 min antes de cada evento
-    if now.minute % 5 == 0 and now.hour*60+now.minute not in (4,15):  # excluye los horarios de resumen
-        # Target timeslot: eventos que comienzan en 5 min
+    # ⚠️ 5 min antes de cada evento
+    if now.minute % 5 == 0 and now.hour*60+now.minute not in (4,15):
         in_5min = []
         for e in events:
-            # combinar Date + Time -> datetime en TZ
-            dt_str = f"{e['Date']} {e['Time']}"
+            # --- PROTEGEMOS Date/Time ---
+            date = e.get("Date") or e.get("date")
+            time = e.get("Time") or e.get("time")
+            if not date or not time:
+                continue  # si falta uno, descartamos
+            dt_str = f"{date} {time}"
             dt = datetime.datetime.strptime(dt_str, "%Y-%m-%d %I:%M%p")
             dt = TZ.localize(dt)
             delta = (dt - now).total_seconds()/60
@@ -86,7 +89,8 @@ def main():
     if wd == 5 and now.hour==17 and now.minute==0:
         start = today - datetime.timedelta(days=7)
         msgs = []
-        for d in (start + datetime.timedelta(days=i) for i in range(7)):
+        for i in range(7):
+            d = start + datetime.timedelta(days=i)
             evs = filter_by_date(events, d, ["USD","EUR"], [2,3])
             for e in evs:
                 e["Date"] = d.strftime("%a %d")
@@ -97,7 +101,6 @@ def main():
 
     # 🔮 Resumen semana entrante: domingos 17:00
     if wd == 6 and now.hour==17 and now.minute==0:
-        # misma lógica que anterior, pero para los próximos 7 días
         msgs = []
         for i in range(1,8):
             d = today + datetime.timedelta(days=i)
@@ -108,6 +111,7 @@ def main():
         if msgs:
             send_messages(format_messages(msgs))
         return
+
 
 if __name__ == "__main__":
     main()
