@@ -1,38 +1,26 @@
-name: 🔔 Forex News Bot
-
+name: forexbot
 on:
-  schedule:
-    # Diario a las 06:00 CET (05:00 UTC en invierno, 04:00 UTC en verano)
-    - cron: '05 05 * * *'
-    # Cada 5 minutos (para notificaciones 5 min antes)
-    - cron: '*/5 * * * *'
-    # Sábados 17:00 CET (16:00 UTC invierno, 15:00 UTC verano)
-    - cron: '15 15 * * SAT'
-    # Domingos 17:00 CET
-    - cron: '15 15 * * SUN'
   workflow_dispatch:
-
+  schedule:
+    - cron: '*/5 * * * *'    # cada 5 min
+    - cron: '0 4 * * *'      # diario 04:00 UTC → 06:00 Berlín
 jobs:
-  run-forex-bot:
+  run:
     runs-on: ubuntu-latest
-
+    env:
+      BOT_TOKEN:  ${{ secrets.BOT_TOKEN }}
+      CHAT_ID:    ${{ secrets.CHAT_ID }}
+      THREAD_ID:  ${{ secrets.THREAD_ID }}
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests python-telegram-bot pytz
+        run: pip install -r requirements.txt
 
       - name: Run bot
-        env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          CHAT_ID:   ${{ secrets.CHAT_ID }}
-          THREAD_ID: ${{ secrets.THREAD_ID }}
-        run: python bot.py
+        run: python -u bot.py
