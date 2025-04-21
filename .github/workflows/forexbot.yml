@@ -2,35 +2,28 @@ name: 🔔 Forex News Bot
 
 on:
   schedule:
-    # 06:00 Berlin -> 04:00 UTC
-    - cron: '0 4 * * *'
-    # Sábados 17:00 Berlin -> 15:00 UTC (weekday 6)
-    - cron: '0 15 * * 6'
-    # Domingos 17:00 Berlin -> 15:00 UTC (weekday 0)
-    - cron: '0 15 * * 0'
-    # Cada 5 minutos para alertas
-    - cron: '*/5 * * * *'
+    - cron: '0 4 * * *'   # Todos los días a las 06:00 Berlín (04:00 UTC)
+    - cron: '0 15 * * 6'  # Todos los sábados a las 17:00 Berlín (15:00 UTC)
+    - cron: '0 15 * * 0'  # Todos los domingos a las 17:00 Berlín (15:00 UTC)
   workflow_dispatch:
 
 jobs:
-  run-forex-bot:
+  run-bot:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Run bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          CHAT_ID: '-1002675757828'
-          THREAD_ID: '10'
+          CHAT_ID:    ${{ secrets.CHAT_ID }}
+          THREAD_ID:  ${{ secrets.THREAD_ID }}
         run: python bot.py
