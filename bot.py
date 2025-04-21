@@ -4,42 +4,40 @@ import datetime
 import pytz
 from telegram import Bot
 
-# === CONFIG ===
-BOT_TOKEN = os.getenv("BOT_TOKEN")           # Pon tu token en GitHub Secrets
-CHAT_ID    = os.getenv("CHAT_ID", "-1002675757828")
-THREAD_ID  = int(os.getenv("THREAD_ID", "10"))
-
-# JSON feed de ForexFactory (export semanal) :contentReference[oaicite:0]{index=0} :contentReference[oaicite:1]{index=1}
-JSON_URL   = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
-
-# Timezone de tu canal (Europe/Berlin)
-TZ = pytz.timezone("Europe/Berlin")
+# ==== CONFIGURACIÓN ====
+BOT_TOKEN   = os.getenv("BOT_TOKEN")           # Se define en GitHub Secrets
+CHAT_ID     = os.getenv("CHAT_ID")             # Se define en GitHub Secrets
+THREAD_ID   = int(os.getenv("THREAD_ID", "0")) # Se define en GitHub Secrets
+JSON_URL    = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+TZ          = pytz.timezone("Europe/Berlin")
 
 bot = Bot(token=BOT_TOKEN)
 
 def fetch_events():
-    resp = requests.get(JSON_URL)
-    resp.raise_for_status()
-    return resp.json()  # lista de dicts
+    r = requests.get(JSON_URL)
+    r.raise_for_status()
+    return r.json()  # lista de dicts
 
-def filter_by_date(events, target_date, currencies, impact_levels):
+def filter_by_date(events, date, currencies, levels):
     out = []
     for e in events:
-        # e["Date"] viene en "YYYY-MM-DD"
-        date = datetime.datetime.strptime(e["Date"], "%Y-%m-%d").date()
-        if date != target_date: continue
-        if e.get("Currency") not in currencies: continue
-        if int(e.get("ImpactLevel",0)) not in impact_levels: continue
+        e_date = datetime.datetime.strptime(e["Date"], "%Y-%m-%d").date()
+        if e_date != date: 
+            continue
+        if e["Currency"] not in currencies: 
+            continue
+        if int(e["ImpactLevel"]) not in levels: 
+            continue
         out.append(e)
     return out
 
 def format_messages(events):
     msgs = []
     for e in events:
-        t = e.get("Time")            # e.g. "08:30am"
-        ev = e.get("Event")
-        prev = e.get("Previous")
-        fc = e.get("Forecast")
+        t   = e["Time"]       # ej. "08:30am"
+        ev  = e["Event"]
+        prev= e["Previous"]
+        fc  = e["Forecast"]
         msgs.append(f"🕒 *{t}* | _{ev}_\nForecast: {fc} | Previous: {prev}")
     return msgs
 
@@ -53,40 +51,38 @@ def send_messages(msgs):
         )
 
 def main():
-    now = datetime.datetime.now(TZ)
+    now   = datetime.datetime.now(TZ)
     today = now.date()
-    wd = today.weekday()  # lun=0 ... dom=6
+    wd    = today.weekday()  # lunes=0, domingo=6
+    events= fetch_events()
 
-    events = fetch_events()
-
-    # ⚠️ 5 min antes de cada evento
-    if now.minute % 5 == 0 and now.hour*60+now.minute not in (4,15):  # excluye los horarios de resumen
-        # Target timeslot: eventos que comienzan en 5 min
-        in_5min = []
+    # 1) ▶️ 5 min antes de cada evento
+    if now.minute % 5 == 0 and not (wd in [5,6] and now.hour==17):
+        in_5 = []
         for e in events:
-            # combinar Date + Time -> datetime en TZ
-            dt_str = f"{e['Date']} {e['Time']}"
-            dt = datetime.datetime.strptime(dt_str, "%Y-%m-%d %I:%M%p")
+            # combinamos Date+Time en datetime
+            dt = datetime.datetime.strptime(f"{e['Date']} {e['Time']}", "%Y-%m-%d %I:%M%p")
             dt = TZ.localize(dt)
             delta = (dt - now).total_seconds()/60
             if 4.5 < delta <= 5.5 and e["Currency"] in ["USD","EUR"] and int(e["ImpactLevel"])>=2:
-                in_5min.append(e)
-        if in_5min:
-            send_messages(format_messages(in_5min))
+                in_5.append(e)
+        if in_5:
+            send_messages(format_messages(in_5))
+            return
+
+    # 2) ▶️ Reporte diario a las 06:00
+    if now.hour==6 and now.minute==0:
+        today_ev = filter_by_date(events, today, ["USD","EUR"], [2,3])
+        if today_ev:
+            send_messages(format_messages(today_ev))
         return
 
-    # 🗓 Boletín diario a las 06:00
-    if now.hour == 6 and now.minute==0:
-        today_events = filter_by_date(events, today, ["USD","EUR"], [2,3])
-        if today_events:
-            send_messages(format_messages(today_events))
-        return
-
-    # 📋 Resumen semana pasada: sábados 17:00
-    if wd == 5 and now.hour==17 and now.minute==0:
-        start = today - datetime.timedelta(days=7)
+    # 3) ▶️ Resumen semana pasada: sábados a las 17:00
+    if wd==5 and now.hour==17 and now.minute==0:
         msgs = []
-        for d in (start + datetime.timedelta(days=i) for i in range(7)):
+        start = today - datetime.timedelta(days=7)
+        for i in range(7):
+            d = start + datetime.timedelta(days=i)
             evs = filter_by_date(events, d, ["USD","EUR"], [2,3])
             for e in evs:
                 e["Date"] = d.strftime("%a %d")
@@ -95,9 +91,8 @@ def main():
             send_messages(format_messages(msgs))
         return
 
-    # 🔮 Resumen semana entrante: domingos 17:00
-    if wd == 6 and now.hour==17 and now.minute==0:
-        # misma lógica que anterior, pero para los próximos 7 días
+    # 4) ▶️ Resumen semana entrante: domingos a las 17:00
+    if wd==6 and now.hour==17 and now.minute==0:
         msgs = []
         for i in range(1,8):
             d = today + datetime.timedelta(days=i)
@@ -108,6 +103,8 @@ def main():
         if msgs:
             send_messages(format_messages(msgs))
         return
+
+    print("⚪️ No hay notificaciones que enviar ahora.")
 
 if __name__ == "__main__":
     main()
