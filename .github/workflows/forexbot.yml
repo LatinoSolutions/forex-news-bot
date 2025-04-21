@@ -1,9 +1,10 @@
 name: forexbot
 on:
-  workflow_dispatch:
+  workflow_dispatch:        # botón “Run workflow”
   schedule:
-    - cron: '*/5 * * * *'    # cada 5 min
-    - cron: '0 4 * * *'      # diario 04:00 UTC → 06:00 Berlín
+    - cron: '*/5 * * * *'   # cada 5 min (alertas)
+    - cron: '0 4 * * *'     # 04:00 UTC = 06:00 Berlín (reporte diario)
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -19,8 +20,11 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install dependencies
+      - name: Install deps
         run: pip install -r requirements.txt
 
+      # → si lo lanzas desde el botón, FORCE_TEST=1 dispara el ping
       - name: Run bot
+        env:
+          FORCE_TEST: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
         run: python -u bot.py
