@@ -1,17 +1,16 @@
 name: forexbot
 on:
-  workflow_dispatch:        # botón “Run workflow”
+  workflow_dispatch:      # botón manual
   schedule:
-    - cron: '*/5 * * * *'   # cada 5 min (alertas)
-    - cron: '0 4 * * *'     # 04:00 UTC = 06:00 Berlín (reporte diario)
-
+    - cron: '*/5 * * * *' # cada 5 min
+    - cron: '0 4 * * *'   # 04:00 UTC = 06:00 Berlín
 jobs:
   run:
     runs-on: ubuntu-latest
     env:
       BOT_TOKEN:  ${{ secrets.BOT_TOKEN }}
-      CHAT_ID:    ${{ secrets.CHAT_ID }}
-      THREAD_ID:  ${{ secrets.THREAD_ID }}
+      CHAT_ID:    ${{ secrets.CHAT_ID }}      # debe empezar por -100…
+      THREAD_ID:  ${{ secrets.THREAD_ID }}    # número del tema (o 0)
     steps:
       - uses: actions/checkout@v4
 
@@ -21,9 +20,9 @@ jobs:
           python-version: '3.12'
 
       - name: Install deps
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt   # ← ahora sí usa tu archivo
 
-      # → si lo lanzas desde el botón, FORCE_TEST=1 dispara el ping
+      # ───── PING de prueba solo cuando pulses “Run workflow” ─────
       - name: Run bot
         env:
           FORCE_TEST: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
